@@ -1,4 +1,5 @@
 from datetime import date
+from enum import Enum
 from django.db import models
 from django.db.models import UniqueConstraint
 from django.core.exceptions import ValidationError
@@ -7,13 +8,22 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.models import AbstractUser
 
+from rdiapp.enums import Role
+
+from pygments.lexers import get_lexer_by_name
+from pygments.formatters.html import HtmlFormatter
+from pygments import highlight
+
 # Create your models here.
 
 class CustomUser(AbstractUser):
     # Add your custom fields here
-    bio = models.TextField(max_length=500, blank=True)
+    role = models.CharField(
+        max_length=10,
+        choices=[(tag.name, tag.value) for tag in Role],
+        default=Role.STUDENT.value
+    )
     birth_date = models.DateField(null=True, blank=True)
-    
     # You can also override existing fields
     email = models.EmailField(unique=True)
     pass
@@ -74,6 +84,8 @@ class TeamHead(models.Model):
 #       ]
 
 class Project(models.Model):
+    owners = models.ForeignKey(Teacher, related_name='rdiapp', on_delete=models.CASCADE, default=1)
+    highlighted = models.TextField(default=1)
     title = models.TextField()
     label = models.CharField(max_length = 32, unique = True, default= "project" )
     keywords = models.TextField()
@@ -101,8 +113,35 @@ class Project(models.Model):
     def __str__(self):
         supervisor_names = ', '.join([supervisor.username for supervisor in self.supervisors.all()])
         return f'Project by {supervisor_names}'
+    
+    def save(self, *args, **kwargs):
+        """
+        Use the `pygments` library to create a highlighted HTML
+        representation of the code snippet.
+        """
+        lexer = get_lexer_by_name(self.language)
+        linenos = 'table' if self.linenos else False
+        options = {'title': self.title} if self.title else {}
+        formatter = HtmlFormatter(style=self.style, linenos=linenos,
+                                  full=True, **options)
+        self.highlighted = highlight(self.code, lexer, formatter)
+        super().save(*args, **kwargs)
 
 class Application(models.Model):
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, default=2)
+    owner = models.ForeignKey(Student, related_name='rdiapp', on_delete=models.CASCADE, default=1)
+    highlighted = models.TextField(default=1)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     application_date = models.DateField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        """
+        Use the `pygments` library to create a highlighted HTML
+        representation of the code snippet.
+        """
+        lexer = get_lexer_by_name(self.language)
+        linenos = 'table' if self.linenos else False
+        options = {'title': self.title} if self.title else {}
+        formatter = HtmlFormatter(style=self.style, linenos=linenos,
+                                  full=True, **options)
+        self.highlighted = highlight(self.code, lexer, formatter)
+        super().save(*args, **kwargs)    
