@@ -1,6 +1,95 @@
 from rest_framework import serializers
 from rdiapp.models import *
 from django.apps import apps
+from rest_framework import serializers
+from django.contrib.auth import get_user_model
+from .models import Student, Teacher, Role, SchoolClassLevel, Up, ResearchTeam
+
+CustomUser = get_user_model()
+
+class UserRegisterSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150)
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True, style={'input_type': 'password'})
+    role = serializers.ChoiceField(choices=[(tag.name, tag.value) for tag in Role])
+    birth_date = serializers.DateField(required=False)
+
+    # Fields for Student
+    student_cv = serializers.FileField(required=False)
+    student_linkedin = serializers.URLField(required=False)
+    student_picture = serializers.ImageField(required=False)
+    student_graduation_year = serializers.IntegerField(required=False)
+    school_class_level = serializers.PrimaryKeyRelatedField(queryset=SchoolClassLevel.objects.all(), required=False)
+
+    # Fields for Teacher
+    teacher_picture = serializers.ImageField(required=False)
+    up = serializers.PrimaryKeyRelatedField(queryset=Up.objects.all(), required=False)
+    research_team = serializers.PrimaryKeyRelatedField(queryset=ResearchTeam.objects.all(), required=False)
+
+    def validate(self, data):
+        role = data.get('role')
+        if role == Role.STUDENT.value:
+            required_fields = ['student_cv', 'student_linkedin', 'student_picture', 'student_graduation_year', 'school_class_level']
+            for field in required_fields:
+                if field not in data:
+                    raise serializers.ValidationError(f"{field} is required for student registration.")
+        elif role == Role.TEACHER.value:
+            required_fields = ['teacher_picture', 'up', 'research_team']
+            for field in required_fields:
+                if field not in data:
+                    raise serializers.ValidationError(f"{field} is required for teacher registration.")
+        return data
+
+    def create(self, validated_data):
+        role = validated_data.pop('role')
+        user_data = {
+            'username': validated_data.pop('username'),
+            'email': validated_data.pop('email'),
+            'password': validated_data.pop('password'),
+            'role': role,
+            'birth_date': validated_data.pop('birth_date', None)
+        }
+        
+        user = CustomUser.objects.create_user(**user_data)
+
+        if role == Role.STUDENT.value:
+            Student.objects.create(
+                user=user,
+                student_cv=validated_data.pop('student_cv'),
+                student_linkedin=validated_data.pop('student_linkedin'),
+                student_picture=validated_data.pop('student_picture'),
+                student_graduation_year=validated_data.pop('student_graduation_year'),
+                school_class_level=validated_data.pop('school_class_level')
+            )
+        elif role == Role.TEACHER.value:
+            Teacher.objects.create(
+                user=user,
+                teacher_picture=validated_data.pop('teacher_picture'),
+                up=validated_data.pop('up'),
+                research_team=validated_data.pop('research_team')
+            )
+
+        return user
+
+
+
+"""class CustomUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['username', 'password', 'email', 'role', 'birth_date']
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }
+
+    def create(self, validated_data):
+        user = CustomUser.objects.create_user(
+            username=validated_data['username'],
+            password=validated_data['password'],
+            email=validated_data['email'],
+            role=validated_data['role'],
+            birth_date=validated_data.get('birth_date')
+        )
+        return user
 
 
 
@@ -19,7 +108,33 @@ class StudentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Application
-        fields = ['__all__','Applications']        
+        fields = ['__all__','Applications']    
+
+
+
+
+
+class UserRegisterSerializer(serializers.Serializer):
+    user = CustomUserSerializer()
+    teacher = TeacherSerializer(required=False)
+    student = StudentSerializer(required=False)
+
+    def create(self, validated_data):
+        user_data = validated_data.pop('user')
+        user = CustomUserSerializer.create(CustomUserSerializer(), validated_data=user_data)
+        
+        if user.role == Role.TEACHER.value:
+            teacher_data = validated_data.pop('teacher', {})
+            Teacher.objects.create(user=user, **teacher_data)
+        
+        elif user.role == Role.STUDENT.value:
+            student_data = validated_data.pop('student', {})
+            Student.objects.create(user=user, **student_data)
+        
+        return user """   
+
+
+
 
 
 
@@ -28,7 +143,7 @@ def generate_serializers():
     serializers_dict = {}
 
     for model in app_models:
-        if ({model.__name__} not in ("Teacher","Student")):
+        if ({model.__name__} not in ("CustomUser","Teacher","Student")):
             serializer_name = f"{model.__name__}Serializer"
             serializer_class = type(serializer_name, (serializers.ModelSerializer,), {
                 "Meta": type("Meta", (), {

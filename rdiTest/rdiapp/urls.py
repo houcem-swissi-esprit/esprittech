@@ -28,6 +28,8 @@ urlpatterns = [
     path('apply-project', ApplicationCreate.as_view(), name='Application'),
     path('projects/<int:pk>/', ProjectDetail.as_view(), name='Project Details'),
     path('login/', LoginView.as_view(), name="login"),
+    path('register/', UserRegisterView.as_view(), name='user-register'),
+
     
     
 ]
