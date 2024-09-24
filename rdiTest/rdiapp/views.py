@@ -1,6 +1,6 @@
 from django.http import HttpResponse
-from django.shortcuts import render
-from rest_framework import generics , permissions
+from django.shortcuts import redirect, render
+from rest_framework import generics , permissions , viewsets
 from rdiapp.permissions import IsOwnerOrReadOnly
 from rdiapp.models import *
 from rdiapp.enums import *
@@ -9,16 +9,22 @@ from rdiapp.serializers import *
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import AllowAny
+from django.contrib.auth import get_user_model
 
 # Create your views here.
 
-"""
+User = get_user_model()
+
+
 def index(request):
     return HttpResponse("You're looking to the index page.")
+
 """
 
 def index(request):
     return render(request, 'index.html') 
+"""
 
 
 
@@ -30,10 +36,11 @@ def index(request):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)"""
 
+"""
 class UserRegisterView(generics.CreateAPIView):
     serializer_class = UserRegisterSerializer
 
-    def create(self, request, *args, **kwargs):
+    def post(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
@@ -41,6 +48,12 @@ class UserRegisterView(generics.CreateAPIView):
             "user": UserRegisterSerializer(user, context=self.get_serializer_context()).data,
             "message": "User registered successfully",
         }, status=status.HTTP_201_CREATED)
+        """
+
+class UserRegisterView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    permission_classes = (AllowAny,)
+    serializer_class = UserRegisterSerializer
 
 class ProjectList(generics.RetrieveAPIView):
     queryset = Project.objects.all()
@@ -76,13 +89,29 @@ class ApplicationCreate(generics.CreateAPIView):
     serializer_class = generated_serializers["ApplicationSerializer"]
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
-class TeacherCreate(generics.CreateAPIView):
+class RoleChoiceView(APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = RoleChoiceSerializer(data=request.data)
+        if serializer.is_valid():
+            role = serializer.validated_data['role']
+            if role == Role.TEACHER.value:
+                return redirect('teacher-create')
+            elif role == Role.STUDENT.value:
+                return redirect('student-create')
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+"""class TeacherCreate(generics.CreateAPIView):
+    queryset = Teacher.objects.all()
+    serializer_class = generated_serializers["TeacherSerializer"]  
+"""
+
+class TeacherCreate(viewsets.ModelViewSet):
     queryset = Teacher.objects.all()
     serializer_class = generated_serializers["TeacherSerializer"]   
 
 class StudentCreate(generics.CreateAPIView):
     queryset = Student.objects.all()
-    serializer_class = generated_serializers["StudentSerializer"]      
+    serializer_class = generated_serializers["StudentSerializer"]     
 
 
 
