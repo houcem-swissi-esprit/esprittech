@@ -1,6 +1,9 @@
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
+<<<<<<< HEAD
 from .forms import RoleForm
+=======
+>>>>>>> 6b3073d0fb68ce09a0dad94671055bba18760aaf
 from rest_framework import generics , permissions , viewsets
 from rdiapp.permissions import IsOwnerOrReadOnly
 from rdiapp.models import *
@@ -12,9 +15,12 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from django.contrib.auth import get_user_model
+<<<<<<< HEAD
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+=======
+>>>>>>> 6b3073d0fb68ce09a0dad94671055bba18760aaf
 
 # Create your views here.
 
@@ -29,6 +35,7 @@ def index(request):
 def index(request):
     return render(request, 'index.html') 
 """
+<<<<<<< HEAD
 
 
 
@@ -44,6 +51,8 @@ def choose_role(request):
         form = RoleForm()
     
     return render(request, 'choose_role.html', {'form': form})
+=======
+>>>>>>> 6b3073d0fb68ce09a0dad94671055bba18760aaf
 
 
 
