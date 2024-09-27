@@ -15,23 +15,42 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
-from django.urls import path
+from django.urls import path, include
 from rest_framework.urlpatterns import format_suffix_patterns
-from django.contrib.auth.views import LoginView
+from rest_framework.routers import DefaultRouter
+from django.contrib.auth.views import *
 from rdiapp.views import *
+from django.contrib import admin
 
-urlpatterns = [
+router = DefaultRouter()
+router.register(r'users', UserViewSet ,  basename='user')
+router.register(r'teachers', TeacherViewSet ,  basename='teacher')
+router.register(r'students', StudentViewSet ,  basename='student')
+
+"""urlpatterns = [
     path("", index, name="index"),
-    #path("register", StudentCreate.as_view, name='StudentCreate.as_view()'),
-    path('add-project', ProjectCreate.as_view(), name='Add Project'),
-    path('projects', ProjectList.as_view(), name='Projects'),
-    path('apply-project', ApplicationCreate.as_view(), name='Application'),
+    path('login/', LoginView.as_view(), name="login"),
+    path('logout/', LogoutView.as_view(), name="logout"),
+    path('student/signup/', StudentCreate.as_view(), name='StudentSignup'),
+    path('teacher/add-project/', ProjectCreate.as_view(), name='Add Project'),
+    path('projects/', ProjectList.as_view(), name='Projects'),
+    path('apply-project/', ApplicationCreate.as_view(), name='Application'),
     path('projects/<int:pk>/', ProjectDetail.as_view(), name='Project Details'),
     path('login/', LoginView.as_view(), name="login"),
-    path('register/', UserRegisterView.as_view(), name='user-register'),
+    path('choose-role/', RoleChoiceView.as_view(), name='role-choice'),
+    path('user-register/', UserRegisterView.as_view(), name='user-register'),
+    path('', include(router.urls)),
 
-    
     
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)
+
+urlpatterns += [
+    path('api-auth/', include('rest_framework.urls')),
+]"""
+
+urlpatterns = [
+    path('', include(router.urls)),
+    path('register/', UserRegisterView.as_view(), name='user-register'),
+]

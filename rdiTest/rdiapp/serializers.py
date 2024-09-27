@@ -7,6 +7,34 @@ from .models import Student, Teacher, Role, SchoolClassLevel, Up, ResearchTeam
 
 CustomUser = get_user_model()
 
+class EnumField(serializers.Field):
+    def __init__(self, enum, **kwargs):
+        self.enum = enum
+        self.enum_values = [e.value for e in enum]
+        super().__init__(**kwargs)
+
+    def to_representation(self, obj):
+        if obj in self.enum_values:
+            return obj
+        raise serializers.ValidationError(f'Invalid value {obj}, expected one of {self.enum_values}')
+
+    def to_internal_value(self, data):
+        try:
+            return self.enum(data).value
+        except ValueError:
+            raise serializers.ValidationError(f'Invalid value {data}, expected one of {self.enum_values}')
+
+# Usage in a serializer
+class RoleSerializer(serializers.ModelSerializer):
+    status = EnumField(enum=Role)
+
+    class Meta:
+        model = Role
+        fields = ['TEACHER', 'STUDENT']  # Include other fields of your model
+
+class RoleChoiceSerializer(serializers.Serializer):
+    role = serializers.ChoiceField(choices=[(role.value, role.name) for role in Role])
+
 class UserRegisterSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150)
     email = serializers.EmailField()

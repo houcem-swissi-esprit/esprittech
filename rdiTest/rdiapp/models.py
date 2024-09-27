@@ -6,7 +6,9 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser,BaseUserManager,AbstractBaseUser
+from django.contrib.auth.hashers import make_password
+from django.contrib.auth.models import UserManager
 
 from rdiapp.enums import Role
 
@@ -16,17 +18,22 @@ from pygments import highlight
 
 # Create your models here.
 
-class CustomUser(AbstractUser):
-    # Add your custom fields here
-    role = models.CharField(
-        max_length=10,
-        choices=[(tag.name, tag.value) for tag in Role],
-        default=Role.STUDENT.value
-    )
+# Enum for Roles
+class Role(Enum):
+    TEACHER = "TEACHER"
+    STUDENT = "STUDENT"
+
+# Custom User model extending Django's AbstractUser
+class User(AbstractUser):
+    role = models.CharField(max_length=50, choices=[(role.name, role.value) for role in Role], null=True, blank=True)
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
     birth_date = models.DateField(null=True, blank=True)
-    # You can also override existing fields
     email = models.EmailField(unique=True)
-    pass
+    picture = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
+
+    def __str__(self):
+        return self.username
 
 class School(models.Model):
     school_name = models.CharField(max_length=100)
@@ -41,12 +48,14 @@ class SchoolClassLevel(models.Model):
     school_class = models.ForeignKey(SchoolClass, on_delete=models.CASCADE, default=1)
 
 class Student(models.Model):
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, default=1)
+    user = models.OneToOneField(User, on_delete=models.CASCADE , related_name='student')
     student_cv = models.FileField(upload_to='students_cvs')
     student_linkedin = models.URLField(max_length=200)
-    student_picture = models.ImageField(upload_to='student_pictures/', height_field=None, width_field=None, max_length=100)
     student_graduation_year = models.PositiveIntegerField()
     school_class_level = models.ForeignKey(SchoolClassLevel, on_delete=models.CASCADE, default=1)
+
+    def __str__(self):
+        return f"Student: {self.user.username}"
 
 class Department(models.Model):
     department_name = models.CharField(max_length=32)
@@ -69,14 +78,19 @@ class ResearchTeam(models.Model):
     research_department = models.ForeignKey(ResearchDepartment, on_delete=models.CASCADE, default=1)
 
 class Teacher(models.Model):
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, default=1)
-    teacher_picture = models.ImageField(upload_to='teacher_pictures/', height_field=None, width_field=None, max_length=100)
+    user = models.OneToOneField(User, on_delete=models.CASCADE , related_name='teacher', default=2)
     up = models.ForeignKey(Up, on_delete=models.CASCADE, default=1)
     research_team = models.ForeignKey(ResearchTeam, on_delete=models.CASCADE, default=1)
+    is_head_supervisor = models.BooleanField(default = False)
 
+    def __str__(self):
+        return f"Teacher: {self.user.username}"
+
+""""
 class TeamHead(models.Model):
     head_supervisor = models.ForeignKey(Teacher, on_delete=models.CASCADE)
     research_team = models.ForeignKey(ResearchTeam, on_delete=models.CASCADE, default=1)
+"""
 
 #   class Meta:
 #       constraints = [

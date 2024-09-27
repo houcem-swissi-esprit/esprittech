@@ -1,4 +1,6 @@
 from django import forms
 
-class UserRegisterForm(forms.Form):
-    role = forms.ChoiceField()
+from .enums import Role
+
+class RoleForm(forms.Form):
+    role = forms.ChoiceField(choices=[(role.name, role.value) for role in Role])
